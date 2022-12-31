@@ -27,16 +27,7 @@ def DataProcess(X_train,y_train):
         _y = normalize_label[i]
         x_list.append(_x.tolist())
         y_list.append(_y.tolist())
-    """
-    array = np.array(df).astype(float)#设置数据类型
 
-    for i in range(0, array.shape[0], FEATURE_NUMBER):
-        for j in range(HOUR_PER_DAY - 9):
-            mat = array[i:i+18, j:j+9]
-            label = array[i+9,j+9] # 用PM2.5作为标签
-            x_list.append(mat)#作为自变量
-            y_list.append(label)#作为因变量
-    """
     #print(x_list)
     x = np.float32(np.array(x_list))#设置浮点数精度为32bits
     y = np.float32(np.array(y_list))
@@ -54,37 +45,10 @@ class NeuralNetwork(nn.Module):
             # nn.Linear(1024, 1)
         )
     def forward(self, x):#forward就是专门用来计算给定输入，得到神经元网络输出的方法
-        temp = self.LSTM(x)
-        temp=temp[0]
-        y_pred = self.linear_relu_stack(temp)
+        y_pred,_ = self.LSTM(x)
+        y_pred = self.linear_relu_stack(y_pred)
         y_pred = y_pred.squeeze()
         return y_pred
-
-def process_predict(df):
-    # df = pd.read_csv('dataset2.csv')  # 读入股票数据
-    data = np.array(df['AverageTemperature_1'])
-
-    # normalize_data = (data - np.mean(data)) / np.std(data)  # 标准化
-    normalize_data = data
-    normalize_data = normalize_data[:, np.newaxis]  # 增加维度
-
-    #x_list= []
-
-    #for i in range(len(normalize_data) - time_step):  # 每七天数据预测第八天数据
-    _x = normalize_data[0:time_step]
-    #x_list.append(_x.tolist())
-
-
-    x = np.float32(np.array(_x.tolist()))  # 设置浮点数精度为32bits
-
-    return x,_x.tolist()
-def predict(x_list,y):
-    x=x_list[1:]
-    temp=[]
-    temp.append(y.numpy().tolist())
-    x.append(temp)
-    X = np.float32(np.array(x))
-    return X,x
 
 if __name__ == '__main__':
     #df = pd.read_csv('data.csv', usecols=range(2,26)) #去2~25列
