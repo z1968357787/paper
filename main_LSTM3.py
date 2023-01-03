@@ -6,10 +6,6 @@ from torch import nn
 import sklearn.datasets as sd
 import sklearn.model_selection as sms
 
-FEATURE_NUMBER = 18
-HOUR_PER_DAY = 24
-time_step = 14
-
 def DataProcess(X_train,y_train):
     #df = pd.read_csv('dataset2.csv')  # 读入股票数据
     #data=np.array(df['AverageTemperature_1'])
@@ -26,16 +22,7 @@ def DataProcess(X_train,y_train):
         _y = normalize_label[i]
         x_list.append(_x.tolist())
         y_list.append(_y.tolist())
-    """
-    array = np.array(df).astype(float)#设置数据类型
 
-    for i in range(0, array.shape[0], FEATURE_NUMBER):
-        for j in range(HOUR_PER_DAY - 9):
-            mat = array[i:i+18, j:j+9]
-            label = array[i+9,j+9] # 用PM2.5作为标签
-            x_list.append(mat)#作为自变量
-            y_list.append(label)#作为因变量
-    """
     #print(x_list)
     x = np.float32(np.array(x_list))#设置浮点数精度为32bits
     y = np.float32(np.array(y_list))
@@ -45,24 +32,39 @@ class NeuralNetwork(nn.Module):
     def __init__(self, input_size):
         super(NeuralNetwork, self).__init__()
         self.flatten = nn.Flatten()#允许维度变换
+        self.temp = nn.LSTM(input_size, input_size, 1)
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, 1024),
-            nn.BatchNorm1d(1024),
-            nn.ReLU(),#激活函数
-            nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Linear(256, 1)
+            #nn.Dropout(),
+
+            nn.BatchNorm1d(input_size),
+            nn.ReLU(),  # 激活函数
+            #nn.Dropout(),
+            nn.Linear(input_size, 1),
+            # nn.ReLU(),
+            # nn.Linear(1024, 1)
         )
+        self.hidden_size=input_size
 
     def forward(self, x):#forward就是专门用来计算给定输入，得到神经元网络输出的方法
-        y_pred = self.linear_relu_stack(x)
-        y_pred = y_pred.squeeze()#这个函数主要对数据的维度进行压缩，去掉维数为1的的维度，比如是一行或者一列这种，一个一行三列（1,3）的数去掉第一个维数为一的维度之后就变成（3）行
-        #y_pred本事一个1行n列的数据，squeeze后就变成了n行
+        input_length=6
+        #print(input_length)
+        hidden=self.initHidden()
+        cell=self.initHidden()
+        output=self.initHidden()
+        outputs = torch.zeros(x.size(0), self.hidden_size)
+        for i in range(input_length):
+            #print(i)
+            output,(hidden,cell)=self.temp(x,(hidden,cell))
+            #print(output)
+            outputs+=output
+        #y_pred,_ = self.RNN(x)
+        y_pred = self.linear_relu_stack(outputs)
+        y_pred = y_pred.squeeze()
         return y_pred
+
+    def initHidden(self):
+        return torch.zeros(1, self.hidden_size)
+
 
 if __name__ == '__main__':
     #df = pd.read_csv('data.csv', usecols=range(2,26)) #去2~25列
@@ -116,6 +118,7 @@ if __name__ == '__main__':
         y_pred = model(x_train)
 
         loss = criterion(y_pred, y_train)#获取偏差
+
         if (t+1) % 50 == 0:
             print(t+1, loss.item())
         loss_train.append(loss.item())
@@ -133,13 +136,13 @@ if __name__ == '__main__':
 
     result=y_pred_test.unsqueeze(1)
     plt.plot(range(len(loss_train)), loss_train, label="training_loss", color="red")  # 红线表示预测值
-    plt.title("4-layers-loss")
+    plt.title("LSTM-loss")
     plt.legend(loc='best')
     plt.show()
     #print(result)
     plt.plot(range(len(y_test)), y_test, label="true_y", color="blue")  # 蓝线表示真实值
     plt.plot(range(len(y_pred_test)), result, label="pred_y", color="red")  # 红线表示预测值
-    plt.title("4-layers-Linear")
+    plt.title("LSTM-Linear")
     plt.legend(loc='best')
     plt.show()
     print('TEST LOSS:', loss_test.item())

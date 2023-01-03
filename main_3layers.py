@@ -21,7 +21,7 @@ def DataProcess(X_train,y_train):
     normalize_label= normalize_label[:, np.newaxis]
     x_list, y_list = [], []
 
-    for i in range(len(normalize_data)-time_step):#每七天数据预测第八天数据
+    for i in range(len(normalize_data)):#每七天数据预测第八天数据
         _x = normalize_data[i,:]
         _y = normalize_label[i]
         x_list.append(_x.tolist())
@@ -47,8 +47,10 @@ class NeuralNetwork(nn.Module):
         self.flatten = nn.Flatten()#允许维度变换
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_size, 1024),
+            #nn.BatchNorm1d(1024),
             nn.ReLU(),#激活函数
             nn.Linear(1024, 512),
+            #nn.BatchNorm1d(512),
             nn.ReLU(),
             nn.Linear(512, 1)
         )
@@ -127,7 +129,7 @@ if __name__ == '__main__':
     model =  NeuralNetwork(x.shape[1])#shape[1]是获取矩阵的列数，由于是转置之后，原本是行数，样本数
 
     criterion = torch.nn.MSELoss(reduction='mean')#损失函数的计算方法
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)#定义SGD随机梯度下降法，学习率
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)#定义SGD随机梯度下降法，学习率
 
     # train
     loss_train=[]
@@ -154,11 +156,13 @@ if __name__ == '__main__':
 
     result=y_pred_test.unsqueeze(1)
     plt.plot(range(len(loss_train)), loss_train, label="training_loss", color="red")  # 红线表示预测值
+    plt.title("3-layers-loss")
     plt.legend(loc='best')
     plt.show()
     #print(result)
     plt.plot(range(len(y_test)), y_test, label="true_y", color="blue")  # 蓝线表示真实值
     plt.plot(range(len(y_pred_test)), result, label="pred_y", color="red")  # 红线表示预测值
+    plt.title("3-layers-Linear")
     plt.legend(loc='best')
     plt.show()
     print('TEST LOSS:', loss_test.item())

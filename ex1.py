@@ -46,6 +46,8 @@ print(loss_train)
 print(loss_valid)
 plt.plot(range(len(y_valid)), y_valid, label="true_y", color="blue")
 plt.plot(range(len(hv)), hv, label="pred_y", color="red")  # 红线表示预测值
+plt.title('1-layer-Linear-CFS')
+plt.legend(loc='best')
 plt.show()
 
 ##ques2
@@ -119,11 +121,12 @@ def descent(X, y, theta, alpha, iters, X_valid, y_valid):
 theta = np.zeros((14, 1))
 
 # 随机梯度下降
-alpha = 1e-3
-iters = 30
+alpha = 1e-2
+iters = 2000
 opt_theta, loss_train, loss_valid,hv = random_descent(X_train, y_train, theta, alpha, iters, X_valid, y_valid)
 plt.plot(range(len(y_valid)), y_valid, label="true_y", color="blue")
 plt.plot(range(len(hv)), hv, label="pred_y", color="red")  # 红线表示预测值
+plt.title('1-layer-Linear-SGD')
 plt.legend(loc='best')
 plt.show()
 #选取矩阵中最小的值
@@ -147,14 +150,15 @@ plt.show()
 theta = np.zeros((14, 1))#14行1列
 
 # 全批量梯度下降
-alpha = 0.0001
-iters = 30
+alpha = 1e-2
+iters = 50
 opt_theta, loss_train, loss_valid,hv2 = descent(X_train, y_train, theta, alpha, iters, X_valid, y_valid)
 #选取矩阵中最小的值
-#plt.plot(range(len(y_valid)), y_valid, label="true_y", color="blue")
-#plt.plot(range(len(hv2)), hv2, label="pred_y", color="red")  # 红线表示预测值
-#plt.legend(loc='best')
-#plt.show()
+plt.plot(range(len(y_valid)), y_valid, label="true_y", color="blue")
+plt.plot(range(len(hv2)), hv2, label="pred_y", color="red")  # 红线表示预测值
+plt.legend(loc='best')
+plt.title('1-layer-Linear-GD')
+plt.show()
 print(loss_train.min())
 print(loss_valid.min())
 

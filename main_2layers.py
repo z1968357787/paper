@@ -21,7 +21,7 @@ def DataProcess(X_train,y_train):
     normalize_label= normalize_label[:, np.newaxis]
     x_list, y_list = [], []
 
-    for i in range(len(normalize_data)-time_step):#每七天数据预测第八天数据
+    for i in range(len(normalize_data)):#每七天数据预测第八天数据
         _x = normalize_data[i,:]
         _y = normalize_label[i]
         x_list.append(_x.tolist())
@@ -47,7 +47,8 @@ class NeuralNetwork(nn.Module):
         self.flatten = nn.Flatten()#允许维度变换
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_size, 1024),
-            nn.ReLU(),#激活函数
+            nn.BatchNorm1d(1024),
+            nn.Tanh(),#激活函数
             nn.Linear(1024, 1)
 
         )
@@ -57,32 +58,6 @@ class NeuralNetwork(nn.Module):
         y_pred = y_pred.squeeze()#这个函数主要对数据的维度进行压缩，去掉维数为1的的维度，比如是一行或者一列这种，一个一行三列（1,3）的数去掉第一个维数为一的维度之后就变成（3）行
         #y_pred本事一个1行n列的数据，squeeze后就变成了n行
         return y_pred
-
-def process_predict(df):
-    # df = pd.read_csv('dataset2.csv')  # 读入股票数据
-    data = np.array(df['AverageTemperature_1'])
-
-    # normalize_data = (data - np.mean(data)) / np.std(data)  # 标准化
-    normalize_data = data
-    normalize_data = normalize_data[:, np.newaxis]  # 增加维度
-
-    #x_list= []
-
-    #for i in range(len(normalize_data) - time_step):  # 每七天数据预测第八天数据
-    _x = normalize_data[0:time_step]
-    #x_list.append(_x.tolist())
-
-
-    x = np.float32(np.array(_x.tolist()))  # 设置浮点数精度为32bits
-
-    return x,_x.tolist()
-def predict(x_list,y):
-    x=x_list[1:]
-    temp=[]
-    temp.append(y.numpy().tolist())
-    x.append(temp)
-    X = np.float32(np.array(x))
-    return X,x
 
 if __name__ == '__main__':
     #df = pd.read_csv('data.csv', usecols=range(2,26)) #去2~25列
@@ -126,7 +101,7 @@ if __name__ == '__main__':
     model =  NeuralNetwork(x.shape[1])#shape[1]是获取矩阵的列数，由于是转置之后，原本是行数，样本数
 
     criterion = torch.nn.MSELoss(reduction='mean')#损失函数的计算方法
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)#定义SGD随机梯度下降法，学习率
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)#定义SGD随机梯度下降法，学习率
 
     # train
     loss_train=[]
@@ -153,11 +128,13 @@ if __name__ == '__main__':
 
     result=y_pred_test.unsqueeze(1)
     plt.plot(range(len(loss_train)), loss_train, label="training_loss", color="red")  # 红线表示预测值
+    plt.title("2-layers-loss")
     plt.legend(loc='best')
     plt.show()
     #print(result)
     plt.plot(range(len(y_test)), y_test, label="true_y", color="blue")  # 蓝线表示真实值
     plt.plot(range(len(y_pred_test)), result, label="pred_y", color="red")  # 红线表示预测值
+    plt.title("2-layers-Linear")
     plt.legend(loc='best')
     plt.show()
     print('TEST LOSS:', loss_test.item())
