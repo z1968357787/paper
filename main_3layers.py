@@ -129,9 +129,10 @@ if __name__ == '__main__':
     model =  NeuralNetwork(x.shape[1])#shape[1]是获取矩阵的列数，由于是转置之后，原本是行数，样本数
 
     criterion = torch.nn.MSELoss(reduction='mean')#损失函数的计算方法
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)#定义SGD随机梯度下降法，学习率
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)#定义SGD随机梯度下降法，学习率
 
     # train
+    model.train()
     loss_train=[]
     print('START TRAIN')
     for t in range(2000):
@@ -147,6 +148,7 @@ if __name__ == '__main__':
         optimizer.step()#更新参数
     
     # test
+    model.eval()
     with torch.no_grad():
         y_pred_test = model(x_test)
     loss_test = criterion(y_pred_test, y_test)#计算误差

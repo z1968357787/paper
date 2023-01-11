@@ -6,10 +6,6 @@ from torch import nn
 import sklearn.datasets as sd
 import sklearn.model_selection as sms
 
-FEATURE_NUMBER = 18
-HOUR_PER_DAY = 24
-time_step = 14
-
 def DataProcess(X_train,y_train):
     #df = pd.read_csv('dataset2.csv')  # 读入股票数据
     #data=np.array(df['AverageTemperature_1'])
@@ -21,7 +17,7 @@ def DataProcess(X_train,y_train):
     normalize_label= normalize_label[:, np.newaxis]
     x_list, y_list = [], []
 
-    for i in range(len(normalize_data)-time_step):#每七天数据预测第八天数据
+    for i in range(len(normalize_data)):#每七天数据预测第八天数据
         _x = normalize_data[i,:]
         _y = normalize_label[i]
         x_list.append(_x.tolist())
@@ -33,24 +29,33 @@ def DataProcess(X_train,y_train):
     return x, y
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size,hidden_size=64):
         super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()#允许维度变换
-        self.RNN = nn.RNN(input_size, 64, 1)
+        #self.flatten = nn.Flatten()#允许维度变换
+        self.hidden_size = hidden_size
+        self.temp = nn.LSTM(input_size, hidden_size, 1,batch_first=True)
         self.linear_relu_stack = nn.Sequential(
             #nn.Dropout(),
+            nn.BatchNorm1d(hidden_size),
             nn.ReLU(),  # 激活函数
             #nn.Dropout(),
-            nn.Linear(64, 1),
+            nn.Linear(hidden_size, 1),
             # nn.ReLU(),
             # nn.Linear(1024, 1)
         )
 
-    def forward(self, x):#forward就是专门用来计算给定输入，得到神经元网络输出的方法
-        y_pred,_ = self.RNN(x)
-        y_pred = self.linear_relu_stack(y_pred)
-        y_pred = y_pred.squeeze()
-        return y_pred
+
+    def forward(self, x,hidden,cell):#forward就是专门用来计算给定输入，得到神经元网络输出的方法
+
+        output,(hidden,cell)=self.temp(x,(hidden,cell))
+        output=output.view(-1,self.hidden_size)
+        #print(output.shape)
+        output = self.linear_relu_stack(output)
+        output = output.squeeze()
+        return output,(hidden,cell)
+
+    def initHidden(self):
+        return torch.zeros(1, self.hidden_size)
 
 
 if __name__ == '__main__':
@@ -95,28 +100,33 @@ if __name__ == '__main__':
     model =  NeuralNetwork(x.shape[1])#shape[1]是获取矩阵的列数，由于是转置之后，原本是行数，样本数
 
     criterion = torch.nn.MSELoss(reduction='mean')#损失函数的计算方法
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)#定义SGD随机梯度下降法，学习率
-
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)#定义SGD随机梯度下降法，学习率
+    #train_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(60,2000,60), gamma=0.2)
     # train
-    #model.train()
+    model.train()
     loss_train=[]
+    hidden=model.initHidden()
+    cell = model.initHidden()
     print('START TRAIN')
-    for t in range(2000):
+    for epoch in range(2000):
         
-        y_pred = model(x_train)
+        y_pred,(hidden,cell) = model(x_train,hidden,cell)
+        hidden=hidden.detach()
+        cell=cell.detach()
 
         loss = criterion(y_pred, y_train)#获取偏差
-        if (t+1) % 50 == 0:
-            print(t+1, loss.item())
+
+        if (epoch + 1) % 50 == 0:
+            print(epoch + 1, loss.item())
         loss_train.append(loss.item())
         optimizer.zero_grad()#在运行反向通道之前，将梯度归零。
         loss.backward()#反向传播计算梯度，否则梯度可能会叠加计算
         optimizer.step()#更新参数
     
     # test
-    #model.eval()
+    model.eval()
     with torch.no_grad():
-        y_pred_test = model(x_test)
+        y_pred_test,(hidden,cell) = model(x_test,hidden,cell)
     loss_test = criterion(y_pred_test, y_test)#计算误差
 
     #torch.save(model.state_dict(), "model.pth")
@@ -124,11 +134,13 @@ if __name__ == '__main__':
 
     result=y_pred_test.unsqueeze(1)
     plt.plot(range(len(loss_train)), loss_train, label="training_loss", color="red")  # 红线表示预测值
+    plt.title("LSTM-loss")
     plt.legend(loc='best')
     plt.show()
     #print(result)
     plt.plot(range(len(y_test)), y_test, label="true_y", color="blue")  # 蓝线表示真实值
     plt.plot(range(len(y_pred_test)), result, label="pred_y", color="red")  # 红线表示预测值
+    plt.title("LSTM-Linear")
     plt.legend(loc='best')
     plt.show()
     print('TEST LOSS:', loss_test.item())
